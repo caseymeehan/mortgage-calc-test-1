@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mortgage Calculator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/17.0.2/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/17.0.2/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/6.26.0/babel.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.1.9/Recharts.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } = Recharts;
+
+        const MortgageCalculator = () => {
+            const [loanAmount, setLoanAmount] = useState(200000);
+            const [interestRate, setInterestRate] = useState(3.5);
+            const [loanTerm, setLoanTerm] = useState(30);
+            const [monthlyPayment, setMonthlyPayment] = useState(0);
+            const [totalInterest, setTotalInterest] = useState(0);
+            const [amortizationSchedule, setAmortizationSchedule] = useState([]);
+
+            const calculateMortgage = () => {
+                const principal = parseFloat(loanAmount);
+                const interest = parseFloat(interestRate) / 100 / 12;
+                const payments = parseFloat(loanTerm) * 12;
+
+                const x = Math.pow(1 + interest, payments);
+                const monthly = (principal * x * interest) / (x - 1);
+
+                if (isFinite(monthly)) {
+                    setMonthlyPayment(monthly.toFixed(2));
+                    setTotalInterest((monthly * payments - principal).toFixed(2));
+                    calculateAmortizationSchedule(principal, interest, payments, monthly);
+                }
+            };
+
+            const calculateAmortizationSchedule = (principal, interest, payments, monthlyPayment) => {
+                let balance = principal;
+                const schedule = [];
+
+                for (let i = 1; i <= payments; i++) {
+                    const interestPayment = balance * interest;
+                    const principalPayment = monthlyPayment - interestPayment;
+                    balance -= principalPayment;
+
+                    if (i % 12 === 0) {
+                        schedule.push({
+                            year: i / 12,
+                            balance: balance.toFixed(2),
+                            principalPaid: (principal - balance).toFixed(2),
+                            interestPaid: (monthlyPayment * i - (principal - balance)).toFixed(2),
+                        });
+                    }
+                }
+
+                setAmortizationSchedule(schedule);
+            };
+
+            useEffect(() => {
+                calculateMortgage();
+            }, [loanAmount, interestRate, loanTerm]);
+
+            return (
+                <div className="max-w-4xl mx-auto p-4 bg-white shadow-lg rounded-lg">
+                    <h2 className="text-2xl font-bold mb-4">Mortgage Calculator</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block mb-2">Loan Amount: ${loanAmount}</label>
+                                <input
+                                    type="range"
+                                    min="10000"
+                                    max="1000000"
+                                    step="1000"
+                                    value={loanAmount}
+                                    onChange={(e) => setLoanAmount(Number(e.target.value))}
+                                    className="w-full"
+                                />
+                            </div>
+                            <div>
+                                <label className="block mb-2">Interest Rate: {interestRate}%</label>
+                                <input
+                                    type="range"
+                                    min="0.1"
+                                    max="10"
+                                    step="0.1"
+                                    value={interestRate}
+                                    onChange={(e) => setInterestRate(Number(e.target.value))}
+                                    className="w-full"
+                                />
+                            </div>
+                            <div>
+                                <label className="block mb-2">Loan Term (years): {loanTerm}</label>
+                                <input
+                                    type="range"
+                                    min="1"
+                                    max="30"
+                                    step="1"
+                                    value={loanTerm}
+                                    onChange={(e) => setLoanTerm(Number(e.target.value))}
+                                    className="w-full"
+                                />
+                            </div>
+                            <div className="mt-4">
+                                <h3 className="text-lg font-semibold">Results:</h3>
+                                <p>Monthly Payment: ${monthlyPayment}</p>
+                                <p>Total Interest: ${totalInterest}</p>
+                            </div>
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-semibold mb-2">Amortization Schedule</h3>
+                            <ResponsiveContainer width="100%" height={300}>
+                                <BarChart data={amortizationSchedule}>
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis dataKey="year" />
+                                    <YAxis />
+                                    <Tooltip />
+                                    <Legend />
+                                    <Bar dataKey="principalPaid" fill="#8884d8" name="Principal Paid" />
+                                    <Bar dataKey="interestPaid" fill="#82ca9d" name="Interest Paid" />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        ReactDOM.render(<MortgageCalculator />, document.getElementById('root'));
+    </script>
+</body>
+</html>
